@@ -1,7 +1,6 @@
 from flask import Flask, render_template
 import requests
 from bs4 import BeautifulSoup
-import re
 
 
 class WebScraper:
@@ -16,65 +15,82 @@ class WebScraper:
             response = requests.get(self.url, headers=self.headers)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
-            return self.modify_grid_items(soup)
+            self.disable_all_links(soup)
+            self.disable_search_bar(soup)
+            self.remove_unwanted_elements(soup)
+            self.modify_grid_items(soup)
+            self.replace_main_slide_image(soup)
+            return soup
         except requests.exceptions.RequestException as e:
             print(f"Erreur lors de la récupération du contenu: {e}")
             return None
 
-    def modify_main_slide_container(self, soup):
-        container = soup.find('div', attrs={'class': 'main-slide-container'})
-        container['href'] = 'javascript:void(0)'
-        container['onclick'] = 'return false;'
-
-
-    def modify_grid_items(self, soup):
-        # Trouver tous les éléments li avec la classe grid-col
-        grid_items = soup.find_all('li', class_='grid-col')
-
-        for item in grid_items:
-            # Ajouter des attributs pour le message au survol et désactiver les liens
-            item['class'] = item.get('class', []) + ['disabled-game']
-
-            # Trouver tous les liens dans cet élément
-            links = item.find_all('a')
-            for link in links:
-                # Remplacer href par javascript:void(0)
+    def disable_all_links(self, soup):
+        for link in soup.find_all('a'):
+            if 'main-slide-container' not in link.parent.get('class', []):
                 link['href'] = 'javascript:void(0)'
                 link['onclick'] = 'return false;'
                 link['class'] = link.get('class', []) + ['disabled-link']
 
+    def disable_search_bar(self, soup):
+        search_bar = soup.find('input', {'type': 'search'})
+        if search_bar:
+            search_bar['disabled'] = 'disabled'
+            search_bar['placeholder'] = 'Recherche désactivée'
+
+    def remove_unwanted_elements(self, soup):
+        search_bar_container = soup.find('div', class_='wdg_search_bar dropdown-container agame')
+        if search_bar_container:
+            search_bar_container.decompose()
+
+        consent_banner = soup.find('div', {'id': 'onetrust-consent-sdk', 'data-nosnippet': 'true'})
+        if consent_banner:
+            consent_banner.decompose()
+
+    def replace_main_slide_image(self, soup):
+        container = soup.find('div', class_='main-slide-container')
+        if container:
+            img_tag = soup.new_tag('img', src='/static/picture/snail.png', alt="Jeu en vedette")
+            container.clear()
+            container.append(img_tag)
+
+    def modify_grid_items(self, soup):
+        grid_items = soup.find_all('li', class_='grid-col')
+        for item in grid_items:
+            item['class'] = item.get('class', []) + ['disabled-game']
+            links = item.find_all('a')
+            for link in links:
+                link['href'] = 'javascript:void(0)'
+                link['onclick'] = 'return false;'
+                link['class'] = link.get('class', []) + ['disabled-link']
         return soup
 
 
 class FlaskApp:
-    """Classe pour gérer l'application Flask."""
-
     def __init__(self, scraper):
-        """Initialise l'application Flask avec un scraper.
-
-        Args:
-            scraper (WebScraper): L'objet scraper à utiliser
-        """
         self.app = Flask(__name__)
+        self.app.static_folder = 'static'
         self.scraper = scraper
         self.configure_routes()
 
     def configure_routes(self):
-        """Configure les routes de l'application Flask."""
-
         @self.app.route('/')
         def home():
-            """Route principale qui affiche le contenu scrapé."""
             soup = self.scraper.get_content()
             if not soup:
                 return "Erreur lors de la récupération du contenu", 500
-
-            # Ajouter le CSS personnalisé et JavaScript dans le head
             head = soup.find('head')
             if head:
-                # Ajouter notre CSS personnalisé
                 custom_css = soup.new_tag('style')
                 custom_css.string = """
+                
+                .main-slide-container img {
+                    width: 100%;
+                    height: auto;
+                    object-fit: cover;
+                    border-radius: 10px;
+                }
+                
                 .disabled-game {
                     position: relative;
                     cursor: not-allowed;
@@ -111,16 +127,13 @@ class FlaskApp:
                 }
                 """
                 head.append(custom_css)
-
             return str(soup)
 
     def run(self, debug=True, port=5000):
-
         self.app.run(debug=debug, port=port)
 
 
 def main():
-    """Point d'entrée principal de l'application."""
     target_url = "https://www.jeu.fr"
     scraper = WebScraper(target_url)
     app = FlaskApp(scraper)
