@@ -13,6 +13,11 @@
     </style>
 </head>
 <body>
+    <a href="{{ url_for('morpion') }}">
+        <button style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+            🎮 Jouer au morpion IA
+        </button>
+    </a>
     <div class="content">
         {{ content|safe }}
     </div>
