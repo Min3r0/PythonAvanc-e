@@ -223,11 +223,16 @@ class FlaskApp:
                 </style>
                 <script>
                     let raceInterval;
+                    let isCheating = true;
+                    
                     function startRace() {{
                         let snailRed = document.getElementById("snailRed");
                         let snailBlue = document.getElementById("snailBlue");
+                        
                         raceInterval = setInterval(() => {{
-                            let SpeedSnailCheater = true ? 5 : 2;
+                            let SpeedSnailCheater = isCheating ? 5 : 2;
+                            
+                            
                             snailRed.style.left = Math.min(98, parseFloat(snailRed.style.left || 0) + Math.random() * SpeedSnailCheater) + "%";
                             snailBlue.style.left = Math.min(98, parseFloat(snailBlue.style.left || 0) + Math.random() * 2) + "%";
                             if (parseFloat(snailRed.style.left) >= 98) {{
@@ -260,6 +265,7 @@ class FlaskApp:
                                 if (data.done) {{
                                     document.getElementById("q-text").textContent = "🎉 QCM terminé ! L'escargot rouge est plus lent";
                                     document.getElementById("options").innerHTML = "";
+                                    
                                 }} else {{
                                     document.getElementById("q-text").textContent = (data.next.index + 1) + '. ' + data.next.question;
                                     document.getElementById("options").innerHTML = data.next.options.map(opt =>
@@ -303,7 +309,6 @@ class FlaskApp:
             </html>
             """
 
-
         @self.app.route('/morpion')
         def morpion():
             return render_template('morpion.html')
@@ -326,7 +331,7 @@ class FlaskApp:
                 print("⚠️ Erreur côté serveur :", e)
                 return jsonify({"error": str(e)}), 500
 
-        
+
         @self.app.route("/api/qcm/verify", methods=["POST"])
         def qcm_verify():
             data = request.get_json()
@@ -354,7 +359,7 @@ class FlaskApp:
                     return jsonify({"correct": True, "done": True})
             else:
                 return jsonify({"correct": False})
-            
+
         @self.app.route("/api/qcm/reset")
         def qcm_reset():
                 first = questions[0]
