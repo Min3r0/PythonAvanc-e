@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Morpion IA</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #f0f8ff; }
+        .grid { display: grid; grid-template-columns: repeat(3, 80px); gap: 5px; justify-content: center; }
+        .cell {
+            width: 80px; height: 80px;
+            font-size: 32px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            background-color: #fff; border: 2px solid #000;
+            cursor: pointer;
+        }
+        .disabled { pointer-events: none; }
+        #message { margin-top: 20px; font-size: 18px; }
+        button { margin-top: 15px; padding: 8px 16px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="grid" id="grid"></div>
+    <div id="message">À vous de jouer !</div>
+    <button onclick="resetGame()">Nouveau jeu</button>
+
+    <script>
+        const gridEl = document.getElementById("grid");
+        const msg = document.getElementById("message");
+        let board = Array(9).fill(0);
+        let gameOver = false;
+
+        function renderGrid() {
+            gridEl.innerHTML = "";
+            board.forEach((val, idx) => {
+                const cell = document.createElement("div");
+                cell.className = "cell";
+                if (val === 1) cell.textContent = "X";
+                if (val === 2) cell.textContent = "O";
+                if (val === 0 && !gameOver) {
+                    cell.addEventListener("click", () => jouer(idx));
+                } else {
+                    cell.classList.add("disabled");
+                }
+                gridEl.appendChild(cell);
+            });
+        }
+
+        function jouer(index) {
+            if (board[index] !== 0 || gameOver) return;
+            board[index] = 1; // joueur humain
+            renderGrid();
+
+            if (checkVictory(1)) {
+                msg.textContent = "🎉 Vous avez gagné !";
+                gameOver = true;
+                return;
+            }
+
+            msg.textContent = "L'IA réfléchit...";
+            fetch("/api/morpion", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ board })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const iaMove = data.move;
+                if (board[iaMove] === 0) {
+                    board[iaMove] = 2;
+                }
+                renderGrid();
+
+        if (checkVictory(2)) {
+            msg.textContent = "💻 L'IA a gagné...";
+            gameOver = true;
+        } else {
+            msg.textContent = "À vous de jouer !";
+        }
+    });
+}
+
+        function checkVictory(player) {
+            const winCombos = [
+                [0,1,2], [3,4,5], [6,7,8], // lignes
+                [0,3,6], [1,4,7], [2,5,8], // colonnes
+                [0,4,8], [2,4,6]           // diagonales
+            ];
+
+    return winCombos.some(combo =>
+        combo.every(index => board[index] === player)
+    );
+}
+
+
+        function resetGame() {
+            board = Array(9).fill(0);
+            gameOver = false;
+            msg.textContent = "À vous de jouer !";
+            renderGrid();
+        }
+
+        renderGrid();
+    </script>
+</body>
+</html>

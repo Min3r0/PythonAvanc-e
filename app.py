@@ -1,6 +1,26 @@
-from flask import Flask
+import joblib
+import numpy as np
+from flask import Flask, render_template, request, jsonify
 import requests
 from bs4 import BeautifulSoup
+
+questions = [
+    {
+        "question": "Quel type de cryptage consiste simplement à décaler chaque lettre d’un message dans l’alphabet ?",
+        "options": ["RSA", "Vigenère", "César", "Affine"],
+        "answer": "César"
+    },
+    {
+        "question": "Quel module Python est utilisé pour parser du contenu HTML dans le scraping ?",
+        "options": ["Pandas", "Json", "BeautifulSoup", "Flask"],
+        "answer": "BeautifulSoup"
+    },
+    {
+        "question": "Quel mot-clé spécial est utilisé dans Flask pour créer une page web ?",
+        "options": ["class", "import", "def", "route"],
+        "answer": "route"
+    }
+]
 
 
 class WebScraper:
@@ -168,6 +188,20 @@ class FlaskApp:
                     <html>
                     <head>
                         <style>
+                            .container {
+                                display: flex;
+                                flex-direction: row;
+                            }
+                            .left-section{
+                                margin-right: 10vw;
+                            }
+                            #blue-track {
+                                background: blue;
+                            }
+                            
+                            #red-track {
+                                background: red;
+                            }
                             .track {
                                 width: 100%;
                                 height: 50px;
@@ -181,17 +215,8 @@ class FlaskApp:
                                 font-size: 30px;
                                 transition: left 0.5s;
                             }
-                            
-                            #blue-track {
-                                background: blue;
-                            }
-                            
-                            #red-track {
-                                background: red;
-                            }
-                            
                         </style>
-                    <script>
+                        <script>
                         let raceInterval;
                         let isCheating = true;
 
@@ -228,9 +253,67 @@ class FlaskApp:
                         <div class="track" id="red-track"><span id="snailRed" class="snail">🐌</span></div>
                         <button onclick="startRace()">Start Race</button>
                         <button onclick="resetRace()">Reset Race</button>
+               
+                        
+                        
+                        <div class="container">
+                            <div class="left-section">
+                                <iframe src="/morpion" style="border:none; width: 450; height: 440;"></iframe>
+                            </div>
+                            
+                            <div class="right-section">
+                                <h2>🧠 Mini QCM Python</h2>
+                                <form method="POST" action="/race/submit">
+                                            {form_html}
+                                <button type="submit">Valider</button>
+                                </form>
+                            </div>
+                        </div>
                     </body>
                     </html>
                     """
+
+        @self.app.route('/morpion')
+        def morpion():
+            return render_template('morpion.html')
+
+        @self.app.route("/api/morpion", methods=["POST"])
+        def api_morpion():
+            data = request.get_json()
+            print("✅ Données reçues :", data)
+
+            board = data.get("board", [])
+            if len(board) != 9:
+                return jsonify({"error": "Grille invalide"}), 400
+
+            try:
+                model = joblib.load("morpion_model.pkl")
+                input_data = np.array(board).reshape(1, -1)
+                prediction = model.predict(input_data)[0]
+                return jsonify({"move": int(prediction)})
+            except Exception as e:
+                print("⚠️ Erreur côté serveur :", e)
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/race/submit", methods=["POST"])
+        def race_submit():
+            score = 0
+            user_answers = []
+            for i, q in enumerate(questions):
+                rep = request.form.get(f"q{i}")
+                user_answers.append(rep)
+                if rep == q["answer"]:
+                    score += 1
+
+            html = "<h2>📝 Résultat du QCM :</h2>"
+            html += f"<p>Score : {score} / {len(questions)}</p><ul>"
+            for i, q in enumerate(questions):
+                html += f"<li><strong>{q['question']}</strong><br>"
+                html += f"✅ Réponse attendue : {q['answer']}<br>"
+                html += f"✏️ Votre réponse : {user_answers[i]}</li><br>"
+            html += "</ul><br><a href='/race'>⬅ Retour à la course</a>"
+            return html
+
     def run(self, debug=True, port=5000):
         self.app.run(debug=debug, port=port)
 
