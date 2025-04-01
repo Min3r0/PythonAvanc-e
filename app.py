@@ -184,94 +184,125 @@ class FlaskApp:
 
         @self.app.route('/race')
         def race():
-            return """
-                    <html>
-                    <head>
-                        <style>
-                            .container {
-                                display: flex;
-                                flex-direction: row;
-                            }
-                            .left-section{
-                                margin-right: 10vw;
-                            }
-                            #blue-track {
-                                background: blue;
-                            }
-                            
-                            #red-track {
-                                background: red;
-                            }
-                            .track {
-                                width: 100%;
-                                height: 50px;
-                                background: lightgray;
-                                position: relative;
-                                margin: 10px 0;
-                            }
-                            .snail {
-                                position: absolute;
-                                left: 0;
-                                font-size: 30px;
-                                transition: left 0.5s;
-                            }
-                        </style>
-                        <script>
-                        let raceInterval;
-                        let isCheating = true;
+            q0 = questions[0]
+            options_html = "".join(
+                [f'<button onclick="submitAnswer(0, \'{opt}\')">{opt}</button><br>' for opt in q0["options"]]
+            )
 
-                        function startRace() {
-                            let snailRed = document.getElementById("snailRed");
-                            let snailBlue = document.getElementById("snailBlue");
-                            
-                            raceInterval = setInterval(() => {
-                                let SpeedSnailCheater = isCheating ? 5 : 2;
-                                snailRed.style.left = Math.min(98, parseFloat(snailRed.style.left || 0) + Math.random() * SpeedSnailCheater) + "%";
-                                snailBlue.style.left = Math.min(98, parseFloat(snailBlue.style.left || 0) + Math.random() * 2) + "%";
-                                if (parseFloat(snailRed.style.left) >= 98) {
-                                    clearInterval(raceInterval);
-                                    alert("L'escargot rouge a gagné !");
-                                }
-                                if (parseFloat(snailBlue.style.left) >= 98) {
-                                    clearInterval(raceInterval);
-                                    alert("L'escargot bleu a gagné !");                               
-                                }
-                            }, 500);
-                        }
-    
-                        function resetRace() {
-                            clearInterval(raceInterval);
-                            document.getElementById("snailRed").style.left = "0%";
-                            document.getElementById("snailBlue").style.left = "0%";
-                            }
-                            
-                    </script>
-                    </head>
-                    <body>
-                        <h1>🏁 Course d'escargots 🏁</h1>
-                        <div class="track" id="blue-track"><span id="snailBlue" class="snail">🐌</span></div>
-                        <div class="track" id="red-track"><span id="snailRed" class="snail">🐌</span></div>
-                        <button onclick="startRace()">Start Race</button>
-                        <button onclick="resetRace()">Reset Race</button>
-               
-                        
-                        
-                        <div class="container">
-                            <div class="left-section">
-                                <iframe src="/morpion" style="border:none; width: 450; height: 440;"></iframe>
-                            </div>
-                            
-                            <div class="right-section">
-                                <h2>🧠 Mini QCM Python</h2>
-                                <form method="POST" action="/race/submit">
-                                            {form_html}
-                                <button type="submit">Valider</button>
-                                </form>
-                            </div>
-                        </div>
-                    </body>
-                    </html>
-                    """
+            return f"""
+            <html>
+            <head>
+                <style>
+                    .container {{
+                        display: flex;
+                        flex-direction: row;
+                        margin-top: 30px;
+                    }}
+                    .left-section {{
+                        margin-right: 10vw;
+                    }}
+                    #blue-track {{
+                        background: blue;
+                    }}
+                    #red-track {{
+                        background: red;
+                    }}
+                    .track {{
+                        width: 100%;
+                        height: 50px;
+                        background: lightgray;
+                        position: relative;
+                        margin: 10px 0;
+                    }}
+                    .snail {{
+                        position: absolute;
+                        left: 0;
+                        font-size: 30px;
+                        transition: left 0.5s;
+                    }}
+                </style>
+                <script>
+                    let raceInterval;
+                    function startRace() {{
+                        let snailRed = document.getElementById("snailRed");
+                        let snailBlue = document.getElementById("snailBlue");
+                        raceInterval = setInterval(() => {{
+                            let SpeedSnailCheater = true ? 5 : 2;
+                            snailRed.style.left = Math.min(98, parseFloat(snailRed.style.left || 0) + Math.random() * SpeedSnailCheater) + "%";
+                            snailBlue.style.left = Math.min(98, parseFloat(snailBlue.style.left || 0) + Math.random() * 2) + "%";
+                            if (parseFloat(snailRed.style.left) >= 98) {{
+                                clearInterval(raceInterval);
+                                alert("L'escargot rouge a gagné !");
+                            }}
+                            if (parseFloat(snailBlue.style.left) >= 98) {{
+                                clearInterval(raceInterval);
+                                alert("L'escargot bleu a gagné !");
+                            }}
+                        }}, 500);
+                    }}
+                    function resetRace() {{
+                        clearInterval(raceInterval);
+                        document.getElementById("snailRed").style.left = "0%";
+                        document.getElementById("snailBlue").style.left = "0%";
+                    }}
+
+                    function submitAnswer(index, answer) {{
+                        fetch('/api/qcm/verify', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ index: index, answer: answer }})
+                        }})
+                        .then(res => res.json())
+                        .then(data => {{
+                            const feedback = document.getElementById("feedback");
+                            if (data.correct) {{
+                                feedback.textContent = "✅ Bonne réponse !";
+                                if (data.done) {{
+                                    document.getElementById("q-text").textContent = "🎉 QCM terminé ! L'escargot rouge est plus lent";
+                                    document.getElementById("options").innerHTML = "";
+                                }} else {{
+                                    document.getElementById("q-text").textContent = (data.next.index + 1) + '. ' + data.next.question;
+                                    document.getElementById("options").innerHTML = data.next.options.map(opt =>
+                                        `<button onclick=\\"submitAnswer(${{data.next.index}}, '${{opt}}')\\">${{opt}}</button><br>`
+                                    ).join('');
+                                }}
+                            }} else {{
+                                feedback.textContent = "❌ Mauvaise réponse. Retour à la première question...";
+                                fetch('/api/qcm/reset')
+                                .then(res => res.json())
+                                .then(reset => {{
+                                    document.getElementById("q-text").textContent = "1. " + reset.question;
+                                    document.getElementById("options").innerHTML = reset.options.map(opt =>
+                                        `<button onclick=\\"submitAnswer(0, '${{opt}}')\\">${{opt}}</button><br>`
+                                    ).join('');
+                                }});
+                            }}
+                        }});
+                    }}
+                </script>
+            </head>
+            <body>
+                <h1>🏁 Course d'escargots 🏁</h1>
+                <div class="track" id="blue-track"><span id="snailBlue" class="snail">🐌</span></div>
+                <div class="track" id="red-track"><span id="snailRed" class="snail">🐌</span></div>
+                <button onclick="startRace()">Start Race</button>
+                <button onclick="resetRace()">Reset Race</button>
+
+                <div class="container">
+                    <div class="left-section">
+                        <iframe src="/morpion" style="border:none; width: 450px; height: 440px;"></iframe>
+                    </div>
+
+                    <div class="right-section">
+                        <h2 id="q-text">1. {q0['question']}</h2>
+                        <div id="options">{options_html}</div>
+                        <p id="feedback" style="font-weight:bold;"></p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
 
         @self.app.route('/morpion')
         def morpion():
@@ -295,24 +326,42 @@ class FlaskApp:
                 print("⚠️ Erreur côté serveur :", e)
                 return jsonify({"error": str(e)}), 500
 
-        @self.app.route("/race/submit", methods=["POST"])
-        def race_submit():
-            score = 0
-            user_answers = []
-            for i, q in enumerate(questions):
-                rep = request.form.get(f"q{i}")
-                user_answers.append(rep)
-                if rep == q["answer"]:
-                    score += 1
+        
+        @self.app.route("/api/qcm/verify", methods=["POST"])
+        def qcm_verify():
+            data = request.get_json()
+            index = data.get("index")
+            answer = data.get("answer")
 
-            html = "<h2>📝 Résultat du QCM :</h2>"
-            html += f"<p>Score : {score} / {len(questions)}</p><ul>"
-            for i, q in enumerate(questions):
-                html += f"<li><strong>{q['question']}</strong><br>"
-                html += f"✅ Réponse attendue : {q['answer']}<br>"
-                html += f"✏️ Votre réponse : {user_answers[i]}</li><br>"
-            html += "</ul><br><a href='/race'>⬅ Retour à la course</a>"
-            return html
+            if index >= len(questions):
+                return jsonify({"done": True})
+
+            question = questions[index]
+            correct = question["answer"].lower() == answer.lower()
+
+            if correct:
+                if index + 1 < len(questions):
+                    next_q = questions[index + 1]
+                    return jsonify({
+                        "correct": True,
+                        "next": {
+                            "index": index + 1,
+                            "question": next_q["question"],
+                            "options": next_q["options"]
+                        }
+                    })
+                else:
+                    return jsonify({"correct": True, "done": True})
+            else:
+                return jsonify({"correct": False})
+            
+        @self.app.route("/api/qcm/reset")
+        def qcm_reset():
+                first = questions[0]
+                return jsonify({
+                    "question": first["question"],
+                    "options": first["options"]
+                })
 
     def run(self, debug=True, port=5000):
         self.app.run(debug=debug, port=port)
