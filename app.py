@@ -200,7 +200,7 @@ class FlaskApp:
                             let snailBlue = document.getElementById("snailBlue");
                             
                             raceInterval = setInterval(() => {
-                                isCheating ? SpeedSnailCheater == 5 : SpeedSnailCheater == 2;
+                                let SpeedSnailCheater = isCheating ? 5 : 2;
                                 snailRed.style.left = Math.min(98, parseFloat(snailRed.style.left || 0) + Math.random() * SpeedSnailCheater) + "%";
                                 snailBlue.style.left = Math.min(98, parseFloat(snailBlue.style.left || 0) + Math.random() * 2) + "%";
                                 if (parseFloat(snailRed.style.left) >= 98) {
