@@ -224,33 +224,71 @@ class FlaskApp:
                 <script>
                     let raceInterval;
                     let isCheating = true;
+                    let blueSnailBoostActive = false;
+                    let redSnailBoostActive = false;
+
                     
                     function startRace() {{
                         let snailRed = document.getElementById("snailRed");
                         let snailBlue = document.getElementById("snailBlue");
                         
+                        
                         raceInterval = setInterval(() => {{
-                            let SpeedSnailCheater = isCheating ? 5 : 2;
+                            let speedRed = isCheating ? 5 : 2;
+                            let speedBlue = 1.9;
+                            
+                            if (blueSnailBoostActive){{
+                                speedBlue += 10;
+                                blueSnailBoostActive = false;
+                            }}
+                            
+                            if (redSnailBoostActive){{
+                                speedRed += 10;
+                                redSnailBoostActive = false;
+                            }}
+                            
+            
+                            if (isCheating){{
+                                snailRed.style.left = Math.min(98, parseFloat(snailRed.style.left || 0) + Math.random() * speedRed) + "%";
+                                snailBlue.style.left = Math.min(98, parseFloat(snailBlue.style.left || 0) + Math.random() * speedBlue) + "%";
+                            }} 
+                            else {{
+                                snailRed.style.left = Math.min(98, parseFloat(snailRed.style.left || 0) + 2 * speedRed) + "%";
+                                snailBlue.style.left = Math.min(98, parseFloat(snailBlue.style.left || 0) + 2 * speedBlue) + "%";
+                            }}
                             
                             
-                            snailRed.style.left = Math.min(98, parseFloat(snailRed.style.left || 0) + Math.random() * SpeedSnailCheater) + "%";
-                            snailBlue.style.left = Math.min(98, parseFloat(snailBlue.style.left || 0) + Math.random() * 2) + "%";
                             if (parseFloat(snailRed.style.left) >= 98) {{
                                 clearInterval(raceInterval);
+                                resetRace();
                                 alert("L'escargot rouge a gagné !");
                             }}
                             if (parseFloat(snailBlue.style.left) >= 98) {{
                                 clearInterval(raceInterval);
+                                resetRace();
                                 alert("L'escargot bleu a gagné !");
+                                
                             }}
                         }}, 500);
                     }}
+                    
+                    
                     function resetRace() {{
                         clearInterval(raceInterval);
                         document.getElementById("snailRed").style.left = "0%";
                         document.getElementById("snailBlue").style.left = "0%";
                     }}
 
+                    
+                    function applyBlueSnailBoost() {{
+                        blueSnailBoostActive = true;
+                    }}
+                    
+                    function applyRedSnailBoost() {{
+                        RedSnailBoostActive = true;
+                    }}
+                    
+                    
                     function submitAnswer(index, answer) {{
                         fetch('/api/qcm/verify', {{
                             method: 'POST',
@@ -263,6 +301,7 @@ class FlaskApp:
                             if (data.correct) {{
                                 feedback.textContent = "✅ Bonne réponse !";
                                 if (data.done) {{
+                                    isCheating = false;
                                     document.getElementById("q-text").textContent = "🎉 QCM terminé ! L'escargot rouge est plus lent";
                                     document.getElementById("options").innerHTML = "";
                                     

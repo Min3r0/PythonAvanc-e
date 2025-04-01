@@ -53,6 +53,9 @@
             if (checkVictory(1)) {
                 msg.textContent = "🎉 Vous avez gagné !";
                 gameOver = true;
+                if (window.parent && window.parent.applyBlueSnailBoost) {
+                    window.parent.applyBlueSnailBoost();
+                }
                 return;
             }
 
@@ -73,6 +76,11 @@
         if (checkVictory(2)) {
             msg.textContent = "💻 L'IA a gagné...";
             gameOver = true;
+
+            if (window.parent && window.parent.applyRedSnailBoost) {
+                    window.parent.applyRedSnailBoost();
+                }
+
         } else {
             msg.textContent = "À vous de jouer !";
         }
